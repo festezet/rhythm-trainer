@@ -1,0 +1,14 @@
+# Rhythm Trainer - Dependencies
+
+# GUI
+customtkinter>=5.2.0
+
+# Audio (low-latency)
+sounddevice>=0.4.6
+numpy>=1.24.0
+
+# Graphiques (optionnel, pour stats avancées)
+matplotlib>=3.7.0
+
+# Base de données (inclus dans Python standard)
+# sqlite3

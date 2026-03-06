@@ -1,0 +1,33 @@
+{
+  "current_level": 2,
+  "unlocked_levels": [
+    1,
+    2
+  ],
+  "pattern_scores": {
+    "5_4_basic_1": 70,
+    "7_8_basic_1": 82,
+    "5_4_eighth_1": 77,
+    "7_8_2plus2plus3": 70,
+    "5_8_basic_1": 78,
+    "7_4_basic_1": 76,
+    "7_4_4plus3": 47,
+    "5_8_sixteenth_1": 60,
+    "5_8_triplets": 38,
+    "5_8_3plus2": 56,
+    "4_4_basic": 72,
+    "4_4_triplets": 65,
+    "4_4_sixteenth_1": 63,
+    "5_4_eighth_all": 70,
+    "5_4_syncopated": 68,
+    "5_4_complex_syncopation": 70,
+    "3_4_basic": 69,
+    "3_4_eighth_all": 50,
+    "4_4_eighth_all": 49,
+    "7_4_eighth_all": 56,
+    "7_8_sixteenth_1": 75,
+    "7_8_sixteenth_all": 64
+  },
+  "total_practice_time": 0,
+  "sessions_count": 105
+}
