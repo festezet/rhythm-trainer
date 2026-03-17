@@ -16,6 +16,9 @@ except ImportError:
     def get_input_devices():
         return []
 
+# Re-export pour compatibilite avec les imports existants
+from src.gui.calibration_dialog import CalibrationDialog  # noqa: F401
+
 
 class SettingsPanel(ctk.CTkFrame):
     """Panneau de configuration des exercices."""
@@ -45,17 +48,25 @@ class SettingsPanel(ctk.CTkFrame):
         self._create_widgets()
 
     def _create_widgets(self):
-        """Crée les widgets du panneau."""
-
-        # Titre
-        title = ctk.CTkLabel(
+        """Cree les widgets du panneau (dispatcher)."""
+        ctk.CTkLabel(
             self,
             text="Configuration",
             font=ctk.CTkFont(size=18, weight="bold")
-        )
-        title.pack(pady=(10, 15))
+        ).pack(pady=(10, 15))
 
-        # === Microphone ===
+        self._create_microphone_section()
+        self._create_signature_section()
+        self._create_pattern_section()
+        self._create_tempo_section()
+        self._create_sensitivity_section()
+        self._create_latency_section()
+        self._create_audio_mode_section()
+        self._create_measures_section()
+        self._create_stats_section()
+
+    def _create_microphone_section(self):
+        """Cree la section microphone."""
         mic_frame = ctk.CTkFrame(self, fg_color="transparent")
         mic_frame.pack(fill='x', padx=15, pady=5)
 
@@ -71,7 +82,6 @@ class SettingsPanel(ctk.CTkFrame):
         )
         self.mic_menu.pack(side='right')
 
-        # Bouton refresh
         self.refresh_btn = ctk.CTkButton(
             mic_frame,
             text="[R]",
@@ -81,10 +91,10 @@ class SettingsPanel(ctk.CTkFrame):
         )
         self.refresh_btn.pack(side='right', padx=5)
 
-        # Charger les périphériques
         self._refresh_devices()
 
-        # === Signature rythmique ===
+    def _create_signature_section(self):
+        """Cree la section signature rythmique."""
         sig_frame = ctk.CTkFrame(self, fg_color="transparent")
         sig_frame.pack(fill='x', padx=15, pady=5)
 
@@ -100,7 +110,8 @@ class SettingsPanel(ctk.CTkFrame):
         )
         self.signature_menu.pack(side='right')
 
-        # === Pattern ===
+    def _create_pattern_section(self):
+        """Cree la section pattern."""
         pattern_frame = ctk.CTkFrame(self, fg_color="transparent")
         pattern_frame.pack(fill='x', padx=15, pady=5)
 
@@ -117,7 +128,8 @@ class SettingsPanel(ctk.CTkFrame):
         )
         self.pattern_menu.pack(side='right')
 
-        # === Tempo ===
+    def _create_tempo_section(self):
+        """Cree la section tempo."""
         tempo_frame = ctk.CTkFrame(self, fg_color="transparent")
         tempo_frame.pack(fill='x', padx=15, pady=10)
 
@@ -137,7 +149,8 @@ class SettingsPanel(ctk.CTkFrame):
         self.bpm_slider.set(80)
         self.bpm_slider.pack(side='right', padx=10)
 
-        # === Sensibilité micro ===
+    def _create_sensitivity_section(self):
+        """Cree la section sensibilite micro."""
         sens_frame = ctk.CTkFrame(self, fg_color="transparent")
         sens_frame.pack(fill='x', padx=15, pady=5)
 
@@ -157,8 +170,7 @@ class SettingsPanel(ctk.CTkFrame):
         self.threshold_slider.set(0.02)
         self.threshold_slider.pack(side='right', padx=10)
 
-        # Aide pour la sensibilité
-        sens_help = ctk.CTkLabel(
+        ctk.CTkLabel(
             self,
             text="Regle le seuil de detection du micro\n"
                  "Valeur basse = plus sensible (sons faibles)\n"
@@ -166,10 +178,10 @@ class SettingsPanel(ctk.CTkFrame):
             font=ctk.CTkFont(size=10),
             text_color=("gray50", "gray60"),
             justify='left'
-        )
-        sens_help.pack(fill='x', padx=20, pady=(0, 10))
+        ).pack(fill='x', padx=20, pady=(0, 10))
 
-        # === Latence manuelle ===
+    def _create_latency_section(self):
+        """Cree la section latence manuelle."""
         latency_frame = ctk.CTkFrame(self, fg_color="transparent")
         latency_frame.pack(fill='x', padx=15, pady=5)
 
@@ -184,15 +196,15 @@ class SettingsPanel(ctk.CTkFrame):
         self.latency_entry.bind('<Return>', lambda e: self._on_latency_change())
         self.latency_entry.bind('<FocusOut>', lambda e: self._on_latency_change())
 
-        info_label = ctk.CTkLabel(
+        ctk.CTkLabel(
             latency_frame,
             text="(0=auto)",
             font=ctk.CTkFont(size=10),
             text_color="gray"
-        )
-        info_label.pack(side='right', padx=5)
+        ).pack(side='right', padx=5)
 
-        # === Mode Audio ===
+    def _create_audio_mode_section(self):
+        """Cree la section mode audio."""
         audio_frame = ctk.CTkFrame(self, fg_color="transparent")
         audio_frame.pack(fill='x', padx=15, pady=10)
 
@@ -207,16 +219,16 @@ class SettingsPanel(ctk.CTkFrame):
         ]
 
         for value, text in modes:
-            rb = ctk.CTkRadioButton(
+            ctk.CTkRadioButton(
                 audio_frame,
                 text=text,
                 variable=self.audio_var,
                 value=value,
                 command=self._on_audio_change
-            )
-            rb.pack(anchor='w', pady=2)
+            ).pack(anchor='w', pady=2)
 
-        # === Nombre de mesures ===
+    def _create_measures_section(self):
+        """Cree la section nombre de mesures."""
         measures_frame = ctk.CTkFrame(self, fg_color="transparent")
         measures_frame.pack(fill='x', padx=15, pady=10)
 
@@ -232,36 +244,33 @@ class SettingsPanel(ctk.CTkFrame):
         )
         self.measures_menu.pack(side='right')
 
-        # === Séparateur ===
-        sep = ctk.CTkFrame(self, height=2, fg_color=("gray70", "gray30"))
-        sep.pack(fill='x', padx=15, pady=15)
+    def _create_stats_section(self):
+        """Cree la section statistiques rapides."""
+        ctk.CTkFrame(self, height=2, fg_color=("gray70", "gray30")).pack(
+            fill='x', padx=15, pady=15
+        )
 
-        # === Statistiques rapides ===
-        stats_label = ctk.CTkLabel(
+        ctk.CTkLabel(
             self,
             text="Stats de session",
             font=ctk.CTkFont(size=14, weight="bold")
-        )
-        stats_label.pack(pady=(5, 10))
+        ).pack(pady=(5, 10))
 
         self.stats_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.stats_frame.pack(fill='x', padx=15)
 
         self.session_count_label = ctk.CTkLabel(
-            self.stats_frame,
-            text="Exercices: 0"
+            self.stats_frame, text="Exercices: 0"
         )
         self.session_count_label.pack(anchor='w')
 
         self.best_score_label = ctk.CTkLabel(
-            self.stats_frame,
-            text="Meilleur score: --"
+            self.stats_frame, text="Meilleur score: --"
         )
         self.best_score_label.pack(anchor='w')
 
         self.avg_deviation_label = ctk.CTkLabel(
-            self.stats_frame,
-            text="Decalage moyen: --"
+            self.stats_frame, text="Decalage moyen: --"
         )
         self.avg_deviation_label.pack(anchor='w')
 
@@ -393,183 +402,6 @@ class SettingsPanel(ctk.CTkFrame):
     def get_settings(self) -> Dict:
         """Retourne les paramètres actuels."""
         return self.current_settings.copy()
-
-
-class CalibrationDialog(ctk.CTkToplevel):
-    """Dialogue de calibration de latence."""
-
-    def __init__(self, master, on_complete: Callable = None):
-        super().__init__(master)
-
-        self.title("Calibration Audio")
-        self.geometry("400x380")
-        self.resizable(False, False)
-
-        # Couleur de fond explicite (éviter transparent!)
-        self.configure(fg_color=("#f0f0f0", "#1a1a1a"))
-
-        self.on_complete = on_complete
-        self.measured_latency = None
-
-        # Générer le son de calibration (fort et audible)
-        self._init_calibration_sound()
-
-        self._create_widgets()
-
-        # Modal - attendre que la fenêtre soit visible avant grab
-        self.transient(master)
-        self.after(100, self._safe_grab)
-
-    def _init_calibration_sound(self):
-        """Initialise le son de calibration."""
-        try:
-            import numpy as np
-            import sounddevice as sd
-            self.sd = sd
-            self.np = np
-
-            # Son plus long et plus fort (200ms, fréquence basse + haute)
-            sample_rate = 44100
-            duration = 0.2
-            t = np.linspace(0, duration, int(sample_rate * duration), False)
-
-            # Mix de fréquences pour être bien audible
-            wave = (0.5 * np.sin(2 * np.pi * 440 * t) +   # La 440Hz
-                    0.3 * np.sin(2 * np.pi * 880 * t) +   # Octave
-                    0.2 * np.sin(2 * np.pi * 220 * t))    # Basse
-
-            # Enveloppe avec attaque rapide
-            envelope = np.minimum(1.0, t * 50) * np.exp(-t * 8)
-
-            self.calibration_sound = (wave * envelope * 0.8).astype(np.float32)
-            self.sample_rate = sample_rate
-        except Exception as e:
-            print(f"Erreur init son: {e}")
-            self.calibration_sound = None
-
-    def _play_calibration_sound(self):
-        """Joue le son de calibration."""
-        if self.calibration_sound is not None:
-            try:
-                self.sd.play(self.calibration_sound, self.sample_rate, blocking=False)
-            except Exception as e:
-                print(f"Erreur lecture son: {e}")
-
-    def _safe_grab(self):
-        """Applique grab_set de manière sécurisée."""
-        try:
-            self.grab_set()
-        except Exception:
-            pass  # Ignorer si échec
-
-    def _create_widgets(self):
-        """Crée les widgets du dialogue."""
-
-        # Titre
-        title = ctk.CTkLabel(
-            self,
-            text="Calibration de Latence",
-            font=ctk.CTkFont(size=20, weight="bold")
-        )
-        title.pack(pady=20)
-
-        # Instructions
-        instructions = ctk.CTkLabel(
-            self,
-            text="La calibration mesure le delai entre\n"
-                 "le son emis et sa detection.\n\n"
-                 "Cliquez sur 'Demarrer' et tapez sur la table\n"
-                 "lorsque vous entendez le click.",
-            justify='center'
-        )
-        instructions.pack(pady=10)
-
-        # Résultat
-        self.result_label = ctk.CTkLabel(
-            self,
-            text="Latence: -- ms",
-            font=ctk.CTkFont(size=16)
-        )
-        self.result_label.pack(pady=20)
-
-        # Boutons
-        btn_frame = ctk.CTkFrame(self, fg_color="transparent")
-        btn_frame.pack(pady=20)
-
-        self.start_btn = ctk.CTkButton(
-            btn_frame,
-            text="Demarrer",
-            command=self._start_calibration
-        )
-        self.start_btn.pack(side='left', padx=10)
-
-        self.skip_btn = ctk.CTkButton(
-            btn_frame,
-            text="Utiliser estimation",
-            command=self._use_estimation
-        )
-        self.skip_btn.pack(side='left', padx=10)
-
-    def _start_calibration(self):
-        """Lance la calibration."""
-        self.start_btn.configure(state='disabled', text="Preparation...")
-        self.result_label.configure(text="4 clics de preparation...")
-
-        # Phase 1: 4 clics de préparation pour se mettre dans le rythme
-        self.prep_count = 0
-        self._play_prep_click()
-
-    def _play_prep_click(self):
-        """Joue les clics de préparation."""
-        if self.prep_count < 4:
-            self._play_calibration_sound()
-            self.prep_count += 1
-            self.result_label.configure(text=f"Preparation {self.prep_count}/4...")
-            # 800ms entre chaque clic de préparation (~75 BPM)
-            self.after(800, self._play_prep_click)
-        else:
-            # Pause avant calibration
-            self.result_label.configure(text="C'est parti !")
-            self.after(800, self._start_calibration_sounds)
-
-    def _start_calibration_sounds(self):
-        """Démarre les sons de calibration après préparation."""
-        self.start_btn.configure(text="Calibration...")
-        self.calibration_count = 0
-        self._play_next_calibration_sound()
-
-    def _play_next_calibration_sound(self):
-        """Joue le prochain son de calibration."""
-        if self.calibration_count < 4:  # 4 sons au lieu de 3
-            self._play_calibration_sound()
-            self.calibration_count += 1
-            self.result_label.configure(text=f"Son {self.calibration_count}/4 - Ecoutez...")
-            # 1 seconde entre chaque son
-            self.after(1000, self._play_next_calibration_sound)
-        else:
-            # Fin de calibration
-            self._calibration_complete()
-
-    def _calibration_complete(self):
-        """Callback fin de calibration."""
-        # Valeur simulée (à remplacer par vraie mesure)
-        self.measured_latency = 15.0
-
-        self.result_label.configure(text=f"Latence mesuree: {self.measured_latency:.1f} ms")
-        self.start_btn.configure(state='normal', text="OK")
-        self.start_btn.configure(command=self._confirm)
-
-    def _use_estimation(self):
-        """Utilise une estimation par défaut."""
-        self.measured_latency = 20.0  # Estimation conservatrice
-        self.result_label.configure(text=f"Latence estimee: {self.measured_latency:.1f} ms")
-        self._confirm()
-
-    def _confirm(self):
-        """Confirme et ferme le dialogue."""
-        if self.on_complete and self.measured_latency is not None:
-            self.on_complete(self.measured_latency)
-        self.destroy()
 
 
 if __name__ == "__main__":

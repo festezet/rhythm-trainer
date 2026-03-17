@@ -206,31 +206,35 @@ class StatsView(ctk.CTkFrame):
                 self.stats_labels[key].configure(text=value)
 
     def update_history(self, history: List[Dict]):
-        """Met à jour l'historique (optimisé pour réutiliser les widgets)."""
-        # Masquer le label "pas de données"
+        """Met a jour l'historique (dispatcher)."""
         if hasattr(self, 'no_data_label') and self.no_data_label.winfo_exists():
             self.no_data_label.pack_forget()
 
         if not history:
-            # Masquer toutes les lignes du cache
-            for row_data in self.history_row_cache:
-                row_data['frame'].pack_forget()
-
-            # Afficher le message "pas de données"
-            if not hasattr(self, 'no_data_label') or not self.no_data_label.winfo_exists():
-                self.no_data_label = ctk.CTkLabel(
-                    self.history_rows_frame,
-                    text="Aucun historique pour le moment.",
-                    text_color=("gray50", "gray60")
-                )
-            self.no_data_label.pack(pady=50)
+            self._show_empty_history()
             return
 
-        # Limiter à 20 entrées
         history = history[:20]
+        self._ensure_row_cache(len(history))
+        self._populate_history_rows(history)
+        self._hide_excess_rows(len(history))
 
-        # Créer des widgets supplémentaires si nécessaire
-        while len(self.history_row_cache) < len(history):
+    def _show_empty_history(self):
+        """Affiche le message d'historique vide."""
+        for row_data in self.history_row_cache:
+            row_data['frame'].pack_forget()
+
+        if not hasattr(self, 'no_data_label') or not self.no_data_label.winfo_exists():
+            self.no_data_label = ctk.CTkLabel(
+                self.history_rows_frame,
+                text="Aucun historique pour le moment.",
+                text_color=("gray50", "gray60")
+            )
+        self.no_data_label.pack(pady=50)
+
+    def _ensure_row_cache(self, needed: int):
+        """Cree des widgets supplementaires dans le cache si necessaire."""
+        while len(self.history_row_cache) < needed:
             row_frame = ctk.CTkFrame(self.history_rows_frame, fg_color="transparent")
 
             date_label = ctk.CTkLabel(row_frame, width=100)
@@ -257,63 +261,54 @@ class StatsView(ctk.CTkFrame):
                 'dev': dev_label
             })
 
-        # Mettre à jour les widgets existants
+    def _populate_history_rows(self, history: List[Dict]):
+        """Remplit les lignes d'historique avec les donnees."""
         for i, entry in enumerate(history):
             row_data = self.history_row_cache[i]
 
-            # Date
-            date_str = entry.get('timestamp', '')[:10]
-            row_data['date'].configure(text=date_str)
-
-            # Pattern
-            pattern = entry.get('pattern_id', '')[:20]
-            row_data['pattern'].configure(text=pattern)
-
-            # BPM
+            row_data['date'].configure(text=entry.get('timestamp', '')[:10])
+            row_data['pattern'].configure(text=entry.get('pattern_id', '')[:20])
             row_data['bpm'].configure(text=str(entry.get('bpm', '')))
 
-            # Score
             score = entry.get('score', 0)
             score_color = '#2ed573' if score >= 70 else '#ffa502' if score >= 50 else '#ff4757'
             row_data['score'].configure(text=str(score), text_color=score_color)
 
-            # Décalage
             dev = entry.get('mean_deviation_ms', 0)
             sign = '+' if dev > 0 else ''
             row_data['dev'].configure(text=f"{sign}{dev:.1f}ms")
 
-            # Afficher la ligne
             row_data['frame'].pack(fill='x', pady=2)
 
-        # Masquer les lignes excédentaires
-        for i in range(len(history), len(self.history_row_cache)):
+    def _hide_excess_rows(self, visible_count: int):
+        """Masque les lignes du cache au-dela du nombre visible."""
+        for i in range(visible_count, len(self.history_row_cache)):
             self.history_row_cache[i]['frame'].pack_forget()
 
     def update_progression_graph(self, data: List[Dict]):
-        """Met à jour le graphique de progression."""
+        """Met a jour le graphique de progression (dispatcher)."""
         self.graph_canvas.delete('all')
 
         if not data:
             self._draw_empty_graph()
             return
 
-        width = self.graph_canvas.winfo_width() or 400
-        height = self.graph_canvas.winfo_height() or 250
-        margin = 40
-
-        # Extraire les valeurs
         scores = [d['avg_score'] for d in data]
-        dates = [d['date'] for d in data]
-
         if not scores:
             self._draw_empty_graph()
             return
 
-        # Normaliser
-        max_score = max(scores) if scores else 100
-        min_score = min(scores) if scores else 0
+        width = self.graph_canvas.winfo_width() or 400
+        height = self.graph_canvas.winfo_height() or 250
+        margin = 40
+        score_range = (min(scores), max(scores))
 
-        # Dessiner les axes
+        self._draw_graph_axes(width, height, margin)
+        self._draw_graph_data(scores, width, height, margin, score_range)
+        self._draw_graph_labels(margin, width, height, score_range)
+
+    def _draw_graph_axes(self, width, height, margin):
+        """Dessine les axes du graphique."""
         self.graph_canvas.create_line(
             margin, height - margin,
             width - margin, height - margin,
@@ -325,36 +320,36 @@ class StatsView(ctk.CTkFrame):
             fill='#4a4a6a', width=2
         )
 
-        # Dessiner les points et lignes
-        if len(scores) > 1:
-            points = []
-            graph_width = width - 2 * margin
-            graph_height = height - 2 * margin
+    def _draw_graph_data(self, scores, width, height, margin, score_range):
+        """Dessine les points et lignes du graphique."""
+        if len(scores) <= 1:
+            return
 
-            for i, score in enumerate(scores):
-                x = margin + (i / (len(scores) - 1)) * graph_width
-                y = height - margin - ((score - min_score) / max(max_score - min_score, 1)) * graph_height
-                points.extend([x, y])
+        min_score, max_score = score_range
+        points = []
+        graph_width = width - 2 * margin
+        graph_height = height - 2 * margin
 
-            # Ligne
-            if len(points) >= 4:
-                self.graph_canvas.create_line(
-                    *points,
-                    fill='#4ecdc4',
-                    width=2,
-                    smooth=True
-                )
+        for i, score in enumerate(scores):
+            x = margin + (i / (len(scores) - 1)) * graph_width
+            y = height - margin - ((score - min_score) / max(max_score - min_score, 1)) * graph_height
+            points.extend([x, y])
 
-            # Points
-            for i in range(0, len(points), 2):
-                x, y = points[i], points[i+1]
-                self.graph_canvas.create_oval(
-                    x-4, y-4, x+4, y+4,
-                    fill='#4ecdc4',
-                    outline=''
-                )
+        if len(points) >= 4:
+            self.graph_canvas.create_line(
+                *points, fill='#4ecdc4', width=2, smooth=True
+            )
 
-        # Labels
+        for i in range(0, len(points), 2):
+            x, y = points[i], points[i+1]
+            self.graph_canvas.create_oval(
+                x-4, y-4, x+4, y+4,
+                fill='#4ecdc4', outline=''
+            )
+
+    def _draw_graph_labels(self, margin, width, height, score_range):
+        """Dessine les labels des axes du graphique."""
+        min_score, max_score = score_range
         self.graph_canvas.create_text(
             margin - 25, margin,
             text=str(int(max_score)),

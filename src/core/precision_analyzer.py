@@ -76,62 +76,12 @@ class PrecisionAnalyzer:
                 expected_times: List[float],
                 pattern_id: str,
                 bpm: int) -> PrecisionResult:
-        """
-        Analyse les taps par rapport aux temps attendus.
-
-        Args:
-            taps: Timestamps des taps détectés (secondes)
-            expected_times: Timestamps attendus (secondes)
-            pattern_id: ID du pattern
-            bpm: Tempo utilisé
-
-        Returns:
-            PrecisionResult avec toutes les métriques
-        """
+        """Analyse les taps par rapport aux temps attendus (dispatcher)."""
         if not expected_times:
             return self._empty_result(pattern_id, bpm)
 
-        # Associer chaque tap au temps attendu le plus proche
-        # Algorithme optimisé O(n+m) au lieu de O(n*m)
-        deviations = []
-        matched_expected = set()
-
-        # Trier les taps (normalement déjà triés)
-        sorted_taps = sorted(taps)
-
-        # Pour chaque temps attendu, chercher le tap le plus proche
-        for i, exp in enumerate(expected_times):
-            min_diff = float('inf')
-            best_tap_idx = None
-
-            # Chercher le tap le plus proche de ce temps attendu
-            for j, tap in enumerate(sorted_taps):
-                diff = (tap - exp) * 1000  # Convertir en ms
-
-                # Si on s'éloigne trop, arrêter la recherche
-                if diff > self.tolerance_ms * 2:
-                    break
-
-                if abs(diff) < abs(min_diff) and j not in matched_expected:
-                    min_diff = diff
-                    best_tap_idx = j
-
-            if best_tap_idx is not None and abs(min_diff) < self.tolerance_ms * 2:
-                deviations.append(min_diff)
-                matched_expected.add(best_tap_idx)
-
-        # Calculer les métriques
-        if deviations:
-            mean_dev = np.mean(deviations)
-            std_dev = np.std(deviations)
-            hits_in_tolerance = sum(1 for d in deviations if abs(d) <= self.tolerance_ms)
-            accuracy = (hits_in_tolerance / len(expected_times)) * 100
-        else:
-            mean_dev = 0
-            std_dev = 0
-            accuracy = 0
-
-        # Score global (0-100)
+        deviations = self._match_taps_to_expected(taps, expected_times)
+        mean_dev, std_dev, accuracy = self._compute_metrics(deviations, len(expected_times))
         score = self._calculate_score(mean_dev, std_dev, accuracy, len(deviations), len(expected_times))
 
         return PrecisionResult(
@@ -146,6 +96,45 @@ class PrecisionAnalyzer:
             deviations=deviations,
             score=score
         )
+
+    def _match_taps_to_expected(self, taps: List[float],
+                                 expected_times: List[float]) -> List[float]:
+        """Associe chaque tap au temps attendu le plus proche."""
+        deviations = []
+        matched_expected = set()
+        sorted_taps = sorted(taps)
+
+        for i, exp in enumerate(expected_times):
+            min_diff = float('inf')
+            best_tap_idx = None
+
+            for j, tap in enumerate(sorted_taps):
+                diff = (tap - exp) * 1000  # Convertir en ms
+
+                if diff > self.tolerance_ms * 2:
+                    break
+
+                if abs(diff) < abs(min_diff) and j not in matched_expected:
+                    min_diff = diff
+                    best_tap_idx = j
+
+            if best_tap_idx is not None and abs(min_diff) < self.tolerance_ms * 2:
+                deviations.append(min_diff)
+                matched_expected.add(best_tap_idx)
+
+        return deviations
+
+    def _compute_metrics(self, deviations: List[float],
+                         expected_count: int) -> tuple:
+        """Calcule les metriques a partir des deviations."""
+        if not deviations:
+            return 0, 0, 0
+
+        mean_dev = np.mean(deviations)
+        std_dev = np.std(deviations)
+        hits_in_tolerance = sum(1 for d in deviations if abs(d) <= self.tolerance_ms)
+        accuracy = (hits_in_tolerance / expected_count) * 100
+        return mean_dev, std_dev, accuracy
 
     def _calculate_score(self, mean_dev: float, std_dev: float,
                         accuracy: float, hits: int, expected: int) -> int:
