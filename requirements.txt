@@ -1,5 +1,8 @@
 # Rhythm Trainer - Dependencies
 
+# Shared library
+shared-lib @ file:///data/projects/shared-lib
+
 # GUI
 customtkinter>=5.2.0
 
@@ -7,8 +10,8 @@ customtkinter>=5.2.0
 sounddevice>=0.4.6
 numpy>=1.24.0
 
-# Graphiques (optionnel, pour stats avancées)
+# Graphiques (optionnel, pour stats avancï¿½es)
 matplotlib>=3.7.0
 
-# Base de données (inclus dans Python standard)
+# Base de donnï¿½es (inclus dans Python standard)
 # sqlite3

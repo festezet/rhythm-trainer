@@ -6,9 +6,10 @@ Calcule les métriques de performance.
 import numpy as np
 from typing import List, Tuple, Optional
 from dataclasses import dataclass
-import sqlite3
 from datetime import datetime
 from pathlib import Path
+
+from shared_lib.db import get_connection, query_db, execute_db
 
 
 @dataclass
@@ -182,7 +183,7 @@ class ProgressTracker:
         """Initialise la base de données."""
         Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
 
-        conn = sqlite3.connect(self.db_path)
+        conn = get_connection(self.db_path)
         cursor = conn.cursor()
 
         cursor.execute('''
@@ -213,10 +214,9 @@ class ProgressTracker:
 
     def save_result(self, result: PrecisionResult):
         """Sauvegarde un résultat dans la base."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = get_connection(self.db_path)
 
-        cursor.execute('''
+        execute_db(conn, '''
             INSERT INTO sessions (
                 timestamp, pattern_id, bpm, mean_deviation_ms,
                 std_deviation_ms, accuracy_percent, hit_count,
@@ -234,43 +234,37 @@ class ProgressTracker:
             result.score
         ))
 
-        conn.commit()
         conn.close()
 
     def get_history(self, pattern_id: str = None, limit: int = 50) -> List[dict]:
         """Récupère l'historique des sessions."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = get_connection(self.db_path)
 
         if pattern_id:
-            cursor.execute('''
+            results = query_db(conn, '''
                 SELECT * FROM sessions
                 WHERE pattern_id = ?
                 ORDER BY timestamp DESC
                 LIMIT ?
             ''', (pattern_id, limit))
         else:
-            cursor.execute('''
+            results = query_db(conn, '''
                 SELECT * FROM sessions
                 ORDER BY timestamp DESC
                 LIMIT ?
             ''', (limit,))
-
-        columns = [desc[0] for desc in cursor.description]
-        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
         conn.close()
         return results
 
     def get_stats(self, pattern_id: str = None) -> dict:
         """Calcule les statistiques globales."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = get_connection(self.db_path)
 
         where_clause = "WHERE pattern_id = ?" if pattern_id else ""
         params = (pattern_id,) if pattern_id else ()
 
-        cursor.execute(f'''
+        row = query_db(conn, f'''
             SELECT
                 COUNT(*) as total_sessions,
                 AVG(score) as avg_score,
@@ -279,25 +273,23 @@ class ProgressTracker:
                 AVG(accuracy_percent) as avg_accuracy
             FROM sessions
             {where_clause}
-        ''', params)
+        ''', params, one=True)
 
-        row = cursor.fetchone()
         conn.close()
 
         return {
-            'total_sessions': row[0] or 0,
-            'avg_score': round(row[1] or 0, 1),
-            'best_score': row[2] or 0,
-            'avg_deviation': round(row[3] or 0, 1),
-            'avg_accuracy': round(row[4] or 0, 1)
+            'total_sessions': row["total_sessions"] or 0,
+            'avg_score': round(row["avg_score"] or 0, 1),
+            'best_score': row["best_score"] or 0,
+            'avg_deviation': round(row["avg_deviation"] or 0, 1),
+            'avg_accuracy': round(row["avg_accuracy"] or 0, 1)
         }
 
     def get_progression(self, pattern_id: str, days: int = 30) -> List[dict]:
         """Récupère la progression sur une période."""
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
+        conn = get_connection(self.db_path)
 
-        cursor.execute('''
+        results = query_db(conn, '''
             SELECT
                 date(timestamp) as date,
                 AVG(score) as avg_score,
@@ -309,9 +301,6 @@ class ProgressTracker:
             GROUP BY date(timestamp)
             ORDER BY date
         ''', (pattern_id, f'-{days} days'))
-
-        columns = ['date', 'avg_score', 'avg_deviation', 'sessions']
-        results = [dict(zip(columns, row)) for row in cursor.fetchall()]
 
         conn.close()
         return results
